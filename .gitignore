@@ -3,3 +3,4 @@ tender-venv
 .env
 .DS_Store
 rib_ausschreibungen/
+*.pyc
