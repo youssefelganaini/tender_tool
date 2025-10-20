@@ -22,14 +22,6 @@ class Contractor(models.Model):
         return self.name or "Unknown Contractor"
 
 
-class PublicationDocument(models.Model):
-    filename = models.CharField(max_length=255)
-    download_link = models.URLField()
-
-    def __str__(self):
-        return self.filename
-
-
 class CPVCode(models.Model):
     code = models.CharField(max_length=20, unique=True)
     description = models.CharField(max_length=255, null=True, blank=True)
@@ -47,6 +39,8 @@ class Publication(models.Model):
     subdivision_into_lots = models.BooleanField(default=False)
     side_offers_allowed = models.BooleanField(default=False)
     several_main_offers_allowed = models.BooleanField(default=False)
+    portal = models.CharField(max_length=100, default="No Portal")
+    publication_url = models.URLField(default="https://www.google.com/")
 
     dates = models.OneToOneField(
         PublicationDates, on_delete=models.CASCADE, related_name="publication"
@@ -54,10 +48,21 @@ class Publication(models.Model):
     contracting_authority = models.ForeignKey(
         Contractor, on_delete=models.CASCADE, related_name="publications"
     )
-    tender_documents = models.ManyToManyField(
-        PublicationDocument, related_name="publications", blank=True
-    )
     cpv_codes = models.ManyToManyField(CPVCode, related_name="publications", blank=True)
 
     def __str__(self):
         return f"{self.tender_number} - {self.title}"
+
+
+class PublicationDocument(models.Model):
+    filename = models.CharField(max_length=255)
+    download_link = models.URLField()
+    tender = models.ForeignKey(
+        Publication,
+        related_name="tender_documents",
+        null=True,
+        on_delete=models.CASCADE,
+    )
+
+    def __str__(self):
+        return self.filename
