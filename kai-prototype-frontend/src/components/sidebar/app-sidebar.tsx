@@ -1,6 +1,5 @@
 import * as React from "react";
 
-import { NavAI } from "@/components/sidebar/nav-ai";
 import { NavMain } from "@/components/sidebar/nav-main";
 import { NavUser } from "@/components/sidebar/nav-user";
 import { TeamSwitcher } from "@/components/sidebar/team-switcher";
@@ -35,7 +34,6 @@ export function AppSidebar({
           activePage={activePage}
           setActivePage={setActivePage}
         />
-        <NavAI items={data.aiTools} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />
