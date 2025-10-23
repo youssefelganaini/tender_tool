@@ -37,11 +37,11 @@ class PublicationInput(BaseModel):
     contracting_authority: ContractorInput
     cpv_codes: List[CPVCodeInput] = []
 
-    publication_url: HttpUrl
+    publication_url: str
     portal_name: str
 
 
 class DocumentInput(BaseModel):
     filename: str
     download_link: str
-    publication: PublicationInput
+    publication_tender_number: str

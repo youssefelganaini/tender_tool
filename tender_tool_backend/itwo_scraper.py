@@ -18,9 +18,7 @@ from core.models import (
     Publication,
     PublicationDocument,
 )
-from itwo_schemas import (
-    PublicationInput,
-)
+from itwo_schemas import PublicationInput, DocumentInput
 
 load_dotenv()
 
@@ -76,36 +74,73 @@ def create_publications(publication_inputs: List[PublicationInput]) -> str:
             )
             publication.cpv_codes.add(cpv_obj)
 
-        # --- Tender Documents ---
-        for doc in input_obj.get("tender_documents", []):
-            doc_obj, _ = PublicationDocument.objects.get_or_create(
-                filename=doc["filename"], download_link=doc["download_link"]
-            )
-            publication.tender_documents.add(doc_obj)
+        # # --- Tender Documents ---
+        # for doc in input_obj.get("tender_documents", []):
+        #     doc_obj, _ = PublicationDocument.objects.get_or_create(
+        #         filename=doc["filename"], download_link=doc["download_link"]
+        #     )
+        #     publication.tender_documents.add(doc_obj)
 
         created_count += 1
 
     return f"✅ Created {created_count} new publication(s) successfully."
 
 
-login_email = os.getenv("LOGIN_EMAIL")
-login_password = os.getenv("LOGIN_PASSWORD")
+@tools.action(description="Create and save publication documents")
+def create_documents(document_inputs: List[DocumentInput]) -> str:
+    created_count = 0
 
-task = f"""Visit https://www.myorder.rib.de/tender/index and login using the email {login_email} and password {login_password}, and extract input_obj for up to 1 publication.  
+    for doc in document_inputs:
+        publication = Publication.objects.get(
+            tender_number=doc.publication_tender_number
+        )
+
+        document, created = PublicationDocument.objects.get_or_create(
+            filename=doc.filename,
+            download_link=doc.download_link,
+            tender=publication,
+        )
+
+        if created:
+            created_count += 1
+
+    return f"✅ Created {created_count} publication documents"
+
+
+login_email_itwo = os.getenv("LOGIN_EMAIL")
+login_password_itwo = os.getenv("LOGIN_PASSWORD")
+
+
+itwo_task = f"""Visit https://www.myorder.rib.de/tender/index and login using the email {login_email_itwo} and password {login_password_itwo}, and extract input_obj for up to 1 publication.  
 When on the "Tenders" page, for each publication:
 2. Open its detail page before extracting any information.  
 3. Use the tools `create_publications` to store the structured input_obj.  
-4. Only use files listed under “Tender Documents. for the tender documents objects”  
+4. ONLY download files that describe that describe the service that needs to be provided. For the tender documents objects use 'create_documents' to save the tender documents objects”  
 5. Ensure all date fields (e.g., PublicationDates) are formatted according to the input models given.  
 """
 
-agent = Agent(
-    task=task, browser=browser, llm=ChatOpenAI(model="gpt-4.1-mini"), tools=tools
+itwo_agent = Agent(
+    task=itwo_task, browser=browser, llm=ChatOpenAI(model="gpt-4.1-mini"), tools=tools
+)
+
+service_bund_task = f"""Visit https://www.service.bund.de/Content/DE/Ausschreibungen/Suche/Formular.html?view=processForm&nn=4641514, and extract input_obj for up to 1 publication.  
+When on the "Tenders" page, for each publication:
+2. DO NOT EXTRACT DATA, visit the detail page first. On the Detail Page, look for the link to the more detailed HTML Page under "Bekanntmachungen" and visit that link.
+3. Use the tools `create_publications` to store the structured input_obj using the info on that page.  
+4. ONLY download files that describe that describe the service that needs to be provided. For the tender documents objects use 'create_documents' to save the tender documents objects”  
+5. Ensure all date fields (e.g., PublicationDates) are formatted according to the input models given.  
+"""
+
+service_bund_agent = Agent(
+    task=itwo_task,
+    browser=browser,
+    llm=ChatOpenAI(model="gpt-4.1-mini"),
+    tools=tools,
 )
 
 
 async def main():
-    await agent.run()
+    await service_bund_agent.run()
 
 
 if __name__ == "__main__":
